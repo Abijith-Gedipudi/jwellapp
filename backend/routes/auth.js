@@ -7,7 +7,7 @@ const db = require('../db');
 router.post('/admin/login', async (req, res) => {
     const { password } = req.body;
     try {
-        const [rows] = await db.execute('SELECT setting_value FROM admin_settings WHERE setting_key = "adminPass"');
+        const [rows] = await db.execute("SELECT setting_value FROM admin_settings WHERE setting_key = 'adminPass'");
         if (rows.length === 0) return res.status(500).json({ error: 'Admin config not found' });
         
         const adminPass = rows[0].setting_value;
@@ -50,11 +50,11 @@ router.post('/cre/login', async (req, res) => {
 router.post('/admin/password', async (req, res) => {
     const { oldPassword, newPassword } = req.body;
     try {
-        const [rows] = await db.execute('SELECT setting_value FROM admin_settings WHERE setting_key = "adminPass"');
+        const [rows] = await db.execute("SELECT setting_value FROM admin_settings WHERE setting_key = 'adminPass'");
         const adminPass = rows[0]?.setting_value;
         if (oldPassword !== adminPass) return res.status(401).json({ error: 'Current password incorrect' });
         
-        await db.execute('UPDATE admin_settings SET setting_value = ? WHERE setting_key = "adminPass"', [newPassword]);
+        await db.execute("UPDATE admin_settings SET setting_value = ? WHERE setting_key = 'adminPass'", [newPassword]);
         res.json({ success: true, message: 'Password updated successfully' });
     } catch (err) {
         res.status(500).json({ error: err.message });

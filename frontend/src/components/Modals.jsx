@@ -1,0 +1,231 @@
+import { useState, useEffect } from 'react';
+import api from '../api';
+import { PURPOSES, CATEGORIES, OUTCOMES, NO_CONV_REASONS, fmtTime, fmtSpent, fmtShort } from '../utils';
+
+export function EntryModal({ user, stores, counters, entries, onClose, onSave }) {
+  const [step, setStep] = useState(1);
+  const [phone, setPhone] = useState('');
+  const [custName, setName] = useState('');
+  const [foundCust, setFound] = useState(null);
+  const [purpose, setPurp] = useState('');
+  const [category, setCat] = useState('');
+  const [counter, setCtr] = useState(null);
+  const [remarks, setRemarks] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const storeCounters = (counters[user.storeId] || []).filter(c => c.active);
+  const STEPS = 5;
+
+  useEffect(() => {
+    if (phone.length === 10) {
+      const prev = entries.filter(e => e.phone === phone);
+      if (prev.length) {
+        const last = prev.sort((a, b) => b.timestamp - a.timestamp)[0];
+        setFound({ name: last.custName, visits: prev.length, last });
+        if (last.custName && !custName) setName(last.custName);
+      }
+    } else setFound(null);
+  }, [phone]);
+
+  async function submit() {
+    if (saving) return;
+    setSaving(true);
+    
+    const entryData = {
+      storeId: user.storeId,
+      creName: user.name,
+      custName: custName || null,
+      phone: phone || null,
+      purpose,
+      category,
+      counterId: counter,
+      remarks
+    };
+
+    try {
+      await api.post('/visits', entryData);
+      onSave();
+    } catch (e) { 
+      alert('Save failed: ' + (e.response?.data?.error || e.message)); 
+    }
+    setSaving(false);
+  }
+
+  const canNext = { 1: true, 2: !!purpose, 3: !!category, 4: !!counter, 5: true };
+  function next() { if (step < STEPS) setStep(s => s + 1); else submit(); }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal fade-in">
+        <div className="modal-head">
+          <div className="modal-title">New Customer Check-in</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="step-indicator">
+            {Array.from({ length: STEPS }).map((_, i) => (
+              <div key={i} className={`step-dot${i + 1 === step ? ' active' : i + 1 < step ? ' done' : ''}`} />
+            ))}
+            <span className="step-label">Step {step} of {STEPS}</span>
+          </div>
+
+          {step === 1 && (
+            <div className="fade-in">
+              <div className="step-title">Phone Number <span style={{ color: '#9A7080', fontWeight: 400, fontSize: 12 }}>(Optional)</span></div>
+              {foundCust && (
+                <div className="customer-found">
+                  <div className="cf-name">↩ Returning: {foundCust.name || 'Customer'}</div>
+                  <div className="cf-detail">{foundCust.visits} visit(s) · Last: {fmtShort(foundCust.last.timestamp)} · {foundCust.last.outcome}</div>
+                </div>
+              )}
+              <input className="inp" style={{ marginBottom: 8 }} placeholder="10-digit mobile" maxLength={10}
+                value={phone} onChange={e => setPhone(e.target.value.replace(/\D/, '').slice(0, 10))} />
+              <input className="inp" placeholder="Customer name (optional)"
+                value={custName} onChange={e => setName(e.target.value)} />
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="fade-in">
+              <div className="step-title">Purpose of Visit</div>
+              <div className="tap-grid tap-grid-3">
+                {PURPOSES.map(p => (
+                  <button key={p} className={`tap-btn${purpose === p ? ' selected' : ''}`} onClick={() => setPurp(p)}>
+                    <span className="tb-emoji">{({ Purchase: '💎', Browsing: '👁', Repair: '🔧', Pickup: '📦', Custom: '✏️' })[p]}</span>{p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="fade-in">
+              <div className="step-title">Jewellery Category</div>
+              <div className="tap-grid tap-grid-3">
+                {CATEGORIES.map(c => (
+                  <button key={c} className={`tap-btn${category === c ? ' selected' : ''}`} onClick={() => setCat(c)}>
+                    <span className="tb-emoji">{({ 'Gold': '✨', 'Diamond': '💎', 'Silver': '🪙', 'Platinum': '⬜', 'Nakshi': '🏺', 'Plain Gold Necklace': '📿', 'Stone Necklace': '💠', 'Bangles': '⭕', 'Rings': '💍', 'Chains': '🔗', 'Lockets': '🔒', 'Oddiynam': '🎀', 'Gem Stones': '🪨', 'Repair': '🔧', 'Multi Products': '🎁' })[c] || '✦'}</span>{c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="fade-in">
+              <div className="step-title">Select Counter</div>
+              <div className="tap-grid" style={{ gridTemplateColumns: '1fr' }}>
+                {storeCounters.map(c => (
+                  <button key={c.id} className={`counter-btn${counter === c.id ? ' selected' : ''}`} onClick={() => setCtr(c.id)}>
+                    <div className="cb-name">{c.name}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="fade-in">
+              <div className="step-title" style={{ marginTop: 8 }}>Notes <span style={{ color: '#9A7080', fontWeight: 400, fontSize: 12 }}>(Optional)</span></div>
+              <textarea className="inp" rows={3} placeholder="Any remarks…" value={remarks} onChange={e => setRemarks(e.target.value)} style={{ resize: 'none', marginBottom: 0 }} />
+            </div>
+          )}
+
+          <div className="step-actions">
+            {step > 1 && <button className="btn step-back" onClick={() => setStep(s => s - 1)}>← Back</button>}
+            <button className="btn btn-gold step-next" onClick={next} disabled={!canNext[step] || saving}>
+              {saving ? 'Saving…' : step === STEPS ? '✓ Check In' : 'Next →'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function OutcomeModal({ entry, onClose }) {
+  const [outcome, setOut] = useState('');
+  const [reason, setReason] = useState(entry.reason || '');
+  const [billNo, setBill] = useState(entry.billNo || '');
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!outcome) return;
+    setSaving(true);
+    try {
+      await api.put(`/visits/${entry.id}`, { outcome, reason, billNo });
+      onClose();
+    } catch (e) { alert('Update failed: ' + e.message); }
+    setSaving(false);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal fade-in">
+        <div className="modal-head">
+          <div className="modal-title">Update Outcome</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="step-title">What happened?</div>
+          <div className="tap-grid tap-grid-2" style={{ marginBottom: 12 }}>
+            {OUTCOMES.filter(o => o.key !== 'Browsing').map(o => (
+              <button key={o.key} className={`tap-btn outcome-btn${outcome === o.key ? ' selected' : ''}`}
+                onClick={() => setOut(o.key)}>
+                <span className="tb-emoji">{o.emoji}</span>{o.label}
+              </button>
+            ))}
+          </div>
+          {outcome === 'Not Converted' && (
+            <>
+              <div className="step-title">Why didn't they buy?</div>
+              <div className="tap-grid tap-grid-2" style={{ marginBottom: 12 }}>
+                {NO_CONV_REASONS.map(r => (
+                  <button key={r} className={`tap-btn${reason === r ? ' selected' : ''}`} onClick={() => setReason(r)}>{r}</button>
+                ))}
+              </div>
+            </>
+          )}
+          {outcome === 'Converted' && (
+            <div style={{ marginBottom: 12 }}>
+              <label className="form-label">Bill Number</label>
+              <input className="inp" placeholder="e.g. ZJ-20450" value={billNo} onChange={e => setBill(e.target.value)} />
+            </div>
+          )}
+          <button className="btn btn-gold" style={{ width: '100%' }} onClick={save} disabled={!outcome || saving}>
+            {saving ? 'Saving…' : '✓ Save'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function BillModal({ entry, onClose }) {
+  const [billNo, setBill] = useState(entry.billNo || '');
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    setSaving(true);
+    try {
+      await api.put(`/visits/${entry.id}`, { outcome: entry.outcome, billNo });
+      onClose();
+    } catch (e) { alert('Update failed: ' + e.message); }
+    setSaving(false);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal fade-in" style={{ maxWidth: 360 }}>
+        <div className="modal-head">
+          <div className="modal-title">Add Bill Number</div>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <input className="inp" placeholder="e.g. ZJ-20450" value={billNo} onChange={e => setBill(e.target.value)} onKeyDown={e => e.key === 'Enter' && save()} />
+          <button className="btn btn-gold" style={{ width: '100%', marginTop: 4 }} onClick={save} disabled={saving}>Save Bill Number</button>
+        </div>
+      </div>
+    </div>
+  );
+}

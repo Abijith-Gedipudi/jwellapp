@@ -68,7 +68,7 @@ function Login({ onLogin, stores: initialStores }) {
           <>
             <label className="input-label">Select Your Store</label>
             <select className="inp" style={{ cursor: 'pointer' }} value={selStore} onChange={e => setSel(e.target.value)}>
-              {stores.filter(s => s.active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              {stores.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
             <label className="input-label">Store PIN</label>
             <input className="inp" type="password" inputMode="numeric" maxLength={6} placeholder="Enter store PIN"

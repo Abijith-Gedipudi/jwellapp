@@ -22,9 +22,13 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Fetch global data needed by both Admin and CRE
+    // Always fetch stores so the login dropdown is populated
+    api.get('/stores').then(res => setStores(res.data)).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    // Fetch counters only after login
     if (user) {
-      api.get('/stores').then(res => setStores(res.data)).catch(console.error);
       api.get('/counters').then(res => setCounters(res.data)).catch(console.error);
     }
   }, [user]);
@@ -51,7 +55,7 @@ function App() {
   }
 
   return (
-    <Router>
+    <Router basename="/crm">
       <Routes>
         <Route 
           path="/" 

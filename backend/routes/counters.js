@@ -1,6 +1,26 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const db = require('../db');
+
+function getUser(req) {
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+    if (!token) return null;
+
+    try {
+        return jwt.verify(token, process.env.JWT_SECRET || 'manepally-super-secret-key-2025');
+    } catch {
+        return null;
+    }
+}
+
+function requireAdmin(req, res) {
+    const user = getUser(req);
+    if (user?.role === 'admin') return true;
+    res.status(403).json({ error: 'Admin access required' });
+    return false;
+}
 
 // Get all counters
 router.get('/', async (req, res) => {
@@ -19,6 +39,8 @@ router.get('/', async (req, res) => {
 
 // Add a counter to a store
 router.post('/:storeId', async (req, res) => {
+    if (!requireAdmin(req, res)) return;
+
     const { storeId } = req.params;
     const { name, category, products } = req.body;
     const id = 'c' + Date.now();
@@ -33,6 +55,8 @@ router.post('/:storeId', async (req, res) => {
 
 // Toggle counter active status
 router.put('/:id/toggle', async (req, res) => {
+    if (!requireAdmin(req, res)) return;
+
     const { id } = req.params;
     try {
         await db.execute('UPDATE counters SET is_active = NOT is_active WHERE id = ?', [id]);
@@ -44,6 +68,8 @@ router.put('/:id/toggle', async (req, res) => {
 
 // Delete counter
 router.delete('/:id', async (req, res) => {
+    if (!requireAdmin(req, res)) return;
+
     const { id } = req.params;
     try {
         await db.execute('DELETE FROM counters WHERE id = ?', [id]);

@@ -73,7 +73,7 @@ try {
     
     if (preg_match('#^auth/admin/password$#', $route)) {
         if ($method === 'POST') {
-            require_auth(); // Ensure token exists
+            require_admin();
             $oldPassword = $body['oldPassword'] ?? '';
             $newPassword = $body['newPassword'] ?? '';
             
@@ -93,17 +93,38 @@ try {
     // ----------------------------------------------------
     if (preg_match('#^stores$#', $route)) {
         if ($method === 'GET') {
-            $stmt = $pdo->query("SELECT id, name, pin, is_active FROM stores");
+            $authUser = optional_auth();
+            $isAdmin = ($authUser['role'] ?? '') === 'admin';
+            $fields = $isAdmin ? 'id, name, pin, is_active' : 'id, name, is_active';
+            $stmt = $pdo->query("SELECT $fields FROM stores");
             $stores = $stmt->fetchAll();
             // Boolean conversion for JSON (PDO returns strings for tinyint)
-            foreach($stores as &$s) { $s['is_active'] = (bool)$s['is_active']; }
+            foreach($stores as &$s) {
+                $s['is_active'] = (bool)$s['is_active'];
+                $s['active'] = $s['is_active'];
+            }
             sendJson($stores);
+        }
+
+        if ($method === 'POST') {
+            require_admin();
+            $name = trim($body['name'] ?? '');
+            $pin = trim($body['pin'] ?? '');
+
+            if ($name === '' || $pin === '') {
+                sendError('Store name and PIN are required', 400);
+            }
+
+            $id = 's' . time();
+            $stmt = $pdo->prepare("INSERT INTO stores (id, name, pin, is_active) VALUES (?, ?, ?, ?)");
+            $stmt->execute([$id, $name, $pin, 1]);
+            sendJson(['success' => true, 'id' => $id]);
         }
     }
     
     if (preg_match('#^stores/([^/]+)/toggle$#', $route, $matches)) {
-        if ($method === 'POST') {
-            require_auth();
+        if ($method === 'PUT' || $method === 'POST') {
+            require_admin();
             $id = $matches[1];
             $stmt = $pdo->prepare("UPDATE stores SET is_active = NOT is_active WHERE id = ?");
             $stmt->execute([$id]);
@@ -113,7 +134,7 @@ try {
     
     if (preg_match('#^stores/([^/]+)$#', $route, $matches)) {
         if ($method === 'PUT') {
-            require_auth();
+            require_admin();
             $id = $matches[1];
             $pin = $body['pin'] ?? '';
             $stmt = $pdo->prepare("UPDATE stores SET pin = ? WHERE id = ?");
@@ -129,15 +150,24 @@ try {
         if ($method === 'GET') {
             $stmt = $pdo->query("SELECT id, store_id, name, category, products, is_active FROM counters");
             $counters = $stmt->fetchAll();
-            foreach($counters as &$c) { $c['is_active'] = (bool)$c['is_active']; }
-            sendJson($counters);
+            $countersMap = [];
+            foreach($counters as $c) {
+                $storeId = $c['store_id'];
+                if (!isset($countersMap[$storeId])) {
+                    $countersMap[$storeId] = [];
+                }
+                $c['is_active'] = (bool)$c['is_active'];
+                $c['active'] = $c['is_active'];
+                $countersMap[$storeId][] = $c;
+            }
+            sendJson($countersMap);
         }
     }
     
     if (preg_match('#^counters/([^/]+)$#', $route, $matches)) {
         $storeId = $matches[1];
         if ($method === 'POST') {
-            require_auth();
+            require_admin();
             $id = 'c' . time();
             $name = $body['name'] ?? '';
             $category = $body['category'] ?? '';
@@ -151,7 +181,7 @@ try {
     
     if (preg_match('#^counters/([^/]+)/toggle$#', $route, $matches)) {
         if ($method === 'PUT') {
-            require_auth();
+            require_admin();
             $id = $matches[1];
             $stmt = $pdo->prepare("UPDATE counters SET is_active = NOT is_active WHERE id = ?");
             $stmt->execute([$id]);
@@ -161,7 +191,7 @@ try {
     
     if (preg_match('#^counters/([^/]+)$#', $route, $matches)) { // DELETE
         if ($method === 'DELETE') {
-            require_auth();
+            require_admin();
             $id = $matches[1];
             $stmt = $pdo->prepare("DELETE FROM counters WHERE id = ?");
             $stmt->execute([$id]);

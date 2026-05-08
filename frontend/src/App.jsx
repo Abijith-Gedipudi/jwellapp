@@ -6,20 +6,13 @@ import AdminDashboard from './pages/AdminDashboard';
 import api from './api';
 
 function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [stores, setStores] = useState([]);
-  const [counters, setCounters] = useState({});
-
-  useEffect(() => {
-    // Check local storage for existing session
+  const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem('user');
     const token = localStorage.getItem('token');
-    if (storedUser && token) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
-  }, []);
+    return storedUser && token ? JSON.parse(storedUser) : null;
+  });
+  const [stores, setStores] = useState([]);
+  const [counters, setCounters] = useState({});
 
   useEffect(() => {
     // Always fetch stores so the login dropdown is populated
@@ -27,8 +20,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Fetch counters only after login
+    // Fetch private dashboard data after login
     if (user) {
+      api.get('/stores').then(res => setStores(res.data)).catch(console.error);
       api.get('/counters').then(res => setCounters(res.data)).catch(console.error);
     }
   }, [user]);
@@ -44,15 +38,6 @@ function App() {
     localStorage.removeItem('token');
     setUser(null);
   };
-
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-brand">✦ Manepally Jewellers</div>
-        <div className="loading-spinner" />
-      </div>
-    );
-  }
 
   return (
     <Router basename="/crm">

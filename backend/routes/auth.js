@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const db = require('../db');
+const JWT_SECRET = process.env.JWT_SECRET || 'manepally-super-secret-key-2025';
 
 // Admin Login
 router.post('/admin/login', async (req, res) => {
@@ -12,7 +13,7 @@ router.post('/admin/login', async (req, res) => {
         
         const adminPass = rows[0].setting_value;
         if (password === adminPass) {
-            const token = jwt.sign({ role: 'admin', id: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1d' });
+            const token = jwt.sign({ role: 'admin', id: 'admin' }, JWT_SECRET, { expiresIn: '1d' });
             res.json({ token, user: { role: 'admin', name: 'Admin', id: 'admin' } });
         } else {
             res.status(401).json({ error: 'Invalid admin password' });
@@ -33,7 +34,7 @@ router.post('/cre/login', async (req, res) => {
         if (!store.is_active) return res.status(403).json({ error: 'Store is disabled' });
 
         if (pin === store.pin) {
-            const token = jwt.sign({ role: 'cre', storeId: store.id }, process.env.JWT_SECRET, { expiresIn: '12h' });
+            const token = jwt.sign({ role: 'cre', storeId: store.id }, JWT_SECRET, { expiresIn: '12h' });
             res.json({ 
                 token, 
                 user: { role: 'cre', name: 'CRE', id: `cre_${store.id}`, storeId: store.id, storeName: store.name } 

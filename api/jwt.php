@@ -76,3 +76,20 @@ function require_auth() {
     }
     return $decoded;
 }
+
+function optional_auth() {
+    $token = get_bearer_token();
+    if(!$token) return null;
+    $decoded = jwt_decode($token);
+    return $decoded ?: null;
+}
+
+function require_admin() {
+    $decoded = require_auth();
+    if(($decoded['role'] ?? '') !== 'admin') {
+        http_response_code(403);
+        echo json_encode(['error' => 'Admin access required']);
+        exit;
+    }
+    return $decoded;
+}

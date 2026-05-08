@@ -55,4 +55,26 @@ INSERT IGNORE INTO stores (id, name, pin, is_active) VALUES
 ('s6', 'Manepally Secunderabad', '6666', TRUE),
 ('s7', 'Manepally Miyapur', '7777', TRUE);
 
--- We won't insert default counters here, they can be added via Admin Dashboard
+-- Insert default counters for every store
+INSERT IGNORE INTO counters (id, store_id, name, category, products, is_active)
+SELECT CONCAT(s.id, '_', c.id), s.id, c.name, c.category, c.products, TRUE
+FROM stores s
+JOIN (
+    SELECT 'C1' id, 'C1 — Tops & Tikka' name, 'Gold' category, 'Tops, Champa Swaralu, Tika, Maati, Orders' products
+    UNION ALL SELECT 'C2', 'C2 — Rings', 'Rings', 'Rings, Emerald Stock, Nakshi Micro, Orders'
+    UNION ALL SELECT 'C3', 'C3 — Lockets', 'Lockets', 'Lockets, Black Beeds, Pustelu, Emerald Stock, Nakshi Micro, Orders'
+    UNION ALL SELECT 'C4', 'C4 — Chains & Bracelets', 'Chains', 'Chains, Bracelet, Nazar Bandh, Hath Phool, Emerald Stock, Watch Strap, Orders'
+    UNION ALL SELECT 'C5', 'C5 — Bangles', 'Bangles', 'Bangles, Baby Bangles, Orders'
+    UNION ALL SELECT 'C6', 'C6 — PL Necklace', 'Plain Gold Necklace', 'PL Necklace, PL NCK Tops, PL Haram, PL Haram Top, Nakshi Micro, Back Chain, Orders'
+    UNION ALL SELECT 'C7', 'C7 — Stone Necklace', 'Stone Necklace', 'ST Necklace, ST NCK Tops, ST Haram, ST Haram Tops, Emerald Stock, Back Chain, Orders'
+    UNION ALL SELECT 'C8', 'C8 — Oddiynam & Idols', 'Oddiynam', 'Oddiynam, Arm Belt, Idols, Kumkum Bharani, Jada, Emerald Stock, Orders'
+    UNION ALL SELECT 'C9', 'C9 — Diamond', 'Diamond', 'D Tops, D Rings, D Lockets, D NCK, D Haram, D Oddy, D Bangles, D Bracelet, D Nose Pin, D Frame, Black Beeds, D Armbelt, Platinum Jewellery, Orders'
+    UNION ALL SELECT 'C10', 'C10 — Silver', 'Silver', 'Silver Jewellery, Silver Articles, Silver Bar, MMTC Silver, Silver Coins, 24KT Gold Foil'
+    UNION ALL SELECT 'C11', 'C11 — 24KT Gold', 'Gold', '24KT Gold, Pure Gold'
+    UNION ALL SELECT 'C12', 'C12 — MMTC Gold & Coins', 'Gold', 'MMTC Gold, PG Coins, Kasu'
+    UNION ALL SELECT 'C13', 'C13 — Multi Products', 'Multi Products', 'Multi Products'
+    UNION ALL SELECT 'C14', 'C14 — Jewellery Repair', 'Repair', 'Jewellery Repair'
+    UNION ALL SELECT 'C15', 'C15 — Gem Stones & Malas', 'Gem Stones', 'Gem Stones, Beeds Malas'
+    UNION ALL SELECT 'C16', 'C16 — Gem Packets', 'Gem Stones', 'Gem Packet'
+    UNION ALL SELECT 'C17', 'C17 — Nakshi Haram', 'Nakshi', 'Nak Haram, Nak Necklace, Nak Bangles'
+) c;

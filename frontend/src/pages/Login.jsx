@@ -9,6 +9,7 @@ function Login({ onLogin, stores: initialStores }) {
   const [pass, setPass] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
+  const effectiveStore = selStore || stores[0]?.id || '';
 
   useEffect(() => {
     if (!initialStores && role === 'cre') {
@@ -16,10 +17,8 @@ function Login({ onLogin, stores: initialStores }) {
         setStores(res.data);
         if (res.data.length > 0) setSel(res.data[0].id);
       }).catch(() => setErr('Failed to load stores.'));
-    } else if (initialStores && initialStores.length > 0 && !selStore) {
-        setSel(initialStores[0].id);
     }
-  }, [initialStores, role, selStore]);
+  }, [initialStores, role]);
 
   const handleLogin = async () => {
     setErr('');
@@ -34,12 +33,12 @@ function Login({ onLogin, stores: initialStores }) {
         const res = await api.post('/auth/admin/login', { password: pass });
         onLogin(res.data.user, res.data.token);
       } else {
-        if (!selStore || !pin) {
+        if (!effectiveStore || !pin) {
           setErr('Store and PIN required.');
           setLoading(false);
           return;
         }
-        const res = await api.post('/auth/cre/login', { storeId: selStore, pin });
+        const res = await api.post('/auth/cre/login', { storeId: effectiveStore, pin });
         onLogin(res.data.user, res.data.token);
       }
     } catch (error) {
@@ -67,7 +66,7 @@ function Login({ onLogin, stores: initialStores }) {
         {role === 'cre' && (
           <>
             <label className="input-label">Select Your Store</label>
-            <select className="inp" style={{ cursor: 'pointer' }} value={selStore} onChange={e => setSel(e.target.value)}>
+            <select className="inp" style={{ cursor: 'pointer' }} value={effectiveStore} onChange={e => setSel(e.target.value)}>
               {stores.filter(s => s.is_active).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
             <label className="input-label">Store PIN</label>

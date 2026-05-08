@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import api from '../api';
-import { PURPOSES, CATEGORIES, OUTCOMES, NO_CONV_REASONS, fmtTime, fmtSpent, fmtShort } from '../utils';
+import { PURPOSES, CATEGORIES, OUTCOMES, NO_CONV_REASONS, fmtShort } from '../utils';
 
-export function EntryModal({ user, stores, counters, entries, onClose, onSave }) {
+export function EntryModal({ user, counters, entries, onClose, onSave }) {
   const [step, setStep] = useState(1);
   const [phone, setPhone] = useState('');
   const [custName, setName] = useState('');
@@ -16,16 +16,25 @@ export function EntryModal({ user, stores, counters, entries, onClose, onSave })
   const storeCounters = (counters[user.storeId] || []).filter(c => c.active);
   const STEPS = 5;
 
-  useEffect(() => {
-    if (phone.length === 10) {
-      const prev = entries.filter(e => e.phone === phone);
-      if (prev.length) {
-        const last = prev.sort((a, b) => b.timestamp - a.timestamp)[0];
-        setFound({ name: last.custName, visits: prev.length, last });
-        if (last.custName && !custName) setName(last.custName);
-      }
-    } else setFound(null);
-  }, [phone]);
+  function updatePhone(value) {
+    const nextPhone = value.replace(/\D/g, '').slice(0, 10);
+    setPhone(nextPhone);
+
+    if (nextPhone.length !== 10) {
+      setFound(null);
+      return;
+    }
+
+    const prev = entries.filter(e => e.phone === nextPhone);
+    if (!prev.length) {
+      setFound(null);
+      return;
+    }
+
+    const last = [...prev].sort((a, b) => b.timestamp - a.timestamp)[0];
+    setFound({ name: last.custName, visits: prev.length, last });
+    if (last.custName && !custName) setName(last.custName);
+  }
 
   async function submit() {
     if (saving) return;
@@ -79,7 +88,7 @@ export function EntryModal({ user, stores, counters, entries, onClose, onSave })
                 </div>
               )}
               <input className="inp" style={{ marginBottom: 8 }} placeholder="10-digit mobile" maxLength={10}
-                value={phone} onChange={e => setPhone(e.target.value.replace(/\D/, '').slice(0, 10))} />
+                value={phone} onChange={e => updatePhone(e.target.value)} />
               <input className="inp" placeholder="Customer name (optional)"
                 value={custName} onChange={e => setName(e.target.value)} />
             </div>
@@ -118,6 +127,8 @@ export function EntryModal({ user, stores, counters, entries, onClose, onSave })
                 {storeCounters.map(c => (
                   <button key={c.id} className={`counter-btn${counter === c.id ? ' selected' : ''}`} onClick={() => setCtr(c.id)}>
                     <div className="cb-name">{c.name}</div>
+                    <div className="cb-cat">{c.category || c.cat}</div>
+                    {c.products && <div style={{ fontSize: 10, color: '#7A5A62', marginTop: 3 }}>{c.products}</div>}
                   </button>
                 ))}
               </div>

@@ -101,7 +101,6 @@ try {
             // Boolean conversion for JSON (PDO returns strings for tinyint)
             foreach($stores as &$s) {
                 $s['is_active'] = (bool)$s['is_active'];
-                $s['active'] = $s['is_active'];
             }
             sendJson($stores);
         }
@@ -116,8 +115,8 @@ try {
             }
 
             $id = 's' . time();
-            $stmt = $pdo->prepare("INSERT INTO stores (id, name, pin, is_active) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$id, $name, $pin, 1]);
+            $stmt = $pdo->prepare("INSERT INTO stores (id, name, pin, is_active) VALUES (?, ?, ?, 1)");
+            $stmt->execute([$id, $name, $pin]);
             sendJson(['success' => true, 'id' => $id]);
         }
     }
@@ -157,7 +156,6 @@ try {
                     $countersMap[$storeId] = [];
                 }
                 $c['is_active'] = (bool)$c['is_active'];
-                $c['active'] = $c['is_active'];
                 $countersMap[$storeId][] = $c;
             }
             sendJson($countersMap);
@@ -173,8 +171,8 @@ try {
             $category = $body['category'] ?? '';
             $products = $body['products'] ?? '';
             
-            $stmt = $pdo->prepare("INSERT INTO counters (id, store_id, name, category, products, is_active) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$id, $storeId, $name, $category, $products, 1]);
+            $stmt = $pdo->prepare("INSERT INTO counters (id, store_id, name, category, products, is_active) VALUES (?, ?, ?, ?, ?, 1)");
+            $stmt->execute([$id, $storeId, $name, $category, $products]);
             sendJson(['success' => true, 'id' => $id]);
         }
     }

@@ -1,19 +1,16 @@
 import axios from 'axios';
 
-const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-const usesPhpRouter = apiBaseUrl.includes('/crm/api');
-
+// Simplest possible connection: just look for the 'api' folder relative to where we are
 const api = axios.create({
-  baseURL: apiBaseUrl,
+  baseURL: '/crm/api',
 });
 
-// Add a request interceptor to attach JWT token
 api.interceptors.request.use(
   (config) => {
-    if (usesPhpRouter && config.url && !config.url.startsWith('api.php')) {
+    // Convert routes like '/stores' to 'api.php?route=stores' for the PHP backend
+    if (config.url && !config.url.includes('.php') && !config.url.startsWith('http')) {
       const route = config.url.replace(/^\/+/, '');
-      config.baseURL = `${apiBaseUrl.replace(/\/$/, '')}/api.php`;
-      config.url = '';
+      config.url = 'api.php';
       config.params = { route, ...(config.params || {}) };
     }
 

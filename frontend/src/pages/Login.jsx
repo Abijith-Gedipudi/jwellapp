@@ -16,7 +16,10 @@ function Login({ onLogin, stores: initialStores }) {
       api.get('/stores').then(res => {
         setStores(res.data);
         if (res.data.length > 0) setSel(res.data[0].id);
-      }).catch(() => setErr('Failed to load stores.'));
+      }).catch(err => {
+        console.error(err);
+        setErr(`Failed to load stores: ${err.message}${err.response ? ` (${err.response.status})` : ''}`);
+      });
     }
   }, [initialStores, role]);
 

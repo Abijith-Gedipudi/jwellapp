@@ -115,8 +115,8 @@ function AdminOverview({ stores, weekE, todayE, conv, convPct }) {
 
   const hourly = Array.from({ length: 12 }, (_, i) => ({ l: `${9 + i}`, v: 0 }));
   todayE.forEach(e => {
-    const h = new Date(e.timestamp).getHours();
-    if (h >= 9 && h < 21) hourly[h - 9].v++;
+    const h = new Date(Number(e.timestamp)).getHours();
+    if (!isNaN(h) && h >= 9 && h < 21) hourly[h - 9].v++;
   });
 
   return (
@@ -130,18 +130,18 @@ function AdminOverview({ stores, weekE, todayE, conv, convPct }) {
         <div className="page-sub">This week's performance</div>
       </div>
       <div className="cards-grid">
-        <div className="metric-card"><div className="mc-label">Walk-ins (Week)</div><div className="mc-value">{weekE.length}</div><div className="mc-sub mc-gold">Today: {todayE.length}</div></div>
-        <div className="metric-card"><div className="mc-label">Converted</div><div className="mc-value mc-green">{conv.length}</div></div>
+        <div className="metric-card"><div className="mc-label">Walk-ins (Week)</div><div className="mc-value">{weekE?.length || 0}</div><div className="mc-sub mc-gold">Today: {todayE?.length || 0}</div></div>
+        <div className="metric-card"><div className="mc-label">Converted</div><div className="mc-value mc-green">{conv?.length || 0}</div></div>
         <div className="metric-card">
           <div className="mc-label">Conv. Rate</div>
-          <div className="mc-value" style={{ color: convPct >= 50 ? '#22c55e' : convPct >= 30 ? '#f59e0b' : '#ef4444' }}>{convPct}%</div>
+          <div className="mc-value" style={{ color: convPct >= 50 ? '#22c55e' : convPct >= 30 ? '#f59e0b' : '#ef4444' }}>{convPct || 0}%</div>
         </div>
-        <div className="metric-card"><div className="mc-label">Pending</div><div className="mc-value mc-yellow">{weekE.filter(e => e.outcome === 'Pending').length}</div></div>
-        <div className="metric-card"><div className="mc-label">Repeat Customers</div><div className="mc-value mc-gold">{weekE.filter(e => e.custType === 'Repeat').length}</div></div>
+        <div className="metric-card"><div className="mc-label">Pending</div><div className="mc-value mc-yellow">{(weekE || []).filter(e => e.outcome === 'Pending').length}</div></div>
+        <div className="metric-card"><div className="mc-label">Repeat Customers</div><div className="mc-value mc-gold">{(weekE || []).filter(e => e.custType === 'Repeat').length}</div></div>
         <div className="metric-card">
           <div className="mc-label">Avg Time</div>
           <div className="mc-value mc-gold">{(() => {
-            const closed = weekE.filter(e => e.exitTimestamp);
+            const closed = (weekE || []).filter(e => e.exitTimestamp);
             return closed.length ? `${Math.round(closed.reduce((sum, e) => sum + (e.exitTimestamp - e.timestamp), 0) / closed.length / 60000)}m` : '—';
           })()}</div>
         </div>
@@ -149,59 +149,62 @@ function AdminOverview({ stores, weekE, todayE, conv, convPct }) {
 
       <div className="cards-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
         <div className="metric-card">
-          <div className="mc-label">Conversion Funnel</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-            <DonutChart pct={convPct} color={convPct >= 50 ? '#22c55e' : convPct >= 30 ? '#f59e0b' : '#ef4444'} />
-            <div style={{ flex: 1 }}>
-              {[
-                ['Walk-ins', weekE.length, '#C9A96E'],
-                ['Converted', conv.length, '#22c55e'],
-                ['Pending', weekE.filter(e => e.outcome === 'Pending').length, '#f59e0b'],
-                ['Lost', weekE.filter(e => e.outcome === 'Not Converted').length, '#ef4444'],
-              ].map(([label, value, color]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12 }}>
-                  <span style={{ color: '#9A7080' }}>{label}</span>
-                  <span style={{ color, fontWeight: 600 }}>{value}</span>
-                </div>
-              ))}
+          <div className="mc-label" style={{ marginBottom: 12 }}>Funnel (Week)</div>
+          {[
+            { l: 'Walk-ins', v: weekE.length, c: '#C9A96E' },
+            { l: 'Engaged', v: weekE.filter(e => e.outcome !== 'Browsing').length, c: '#D81B60' },
+            { l: 'Converted', v: conv.length, c: '#22c55e' },
+          ].map((f, i) => (
+            <div key={i} style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
+                <span style={{ color: '#C0A0A8' }}>{f.l}</span>
+                <span style={{ color: f.c, fontWeight: 600 }}>{f.v}</span>
+              </div>
+              <div className="progress-bar" style={{ height: 8 }}>
+                <div className="progress-fill" style={{ width: `${weekE.length ? Math.round(f.v / weekE.length * 100) : 0}%`, background: f.c, height: '100%' }} />
+              </div>
             </div>
-          </div>
+          ))}
         </div>
-
         <div className="metric-card">
-          <div className="mc-label">Today's Hourly Flow</div>
-          <MiniBarChart data={hourly} color="#7A1C3A" />
+          <div className="mc-label" style={{ marginBottom: 8 }}>Today Hourly</div>
+          <MiniBarChart data={hourly} color="#C9A96E" />
         </div>
       </div>
 
-      <div className="table-wrap">
-        <div className="table-head"><div className="table-title">Store Leaderboard</div></div>
-        {storePerf.length === 0 ? <div className="no-data">No active stores.</div> : (
-          <table>
-            <thead><tr><th>Store</th><th>Walk-ins</th><th>Converted</th><th>Rate</th><th>Avg Time</th></tr></thead>
-            <tbody>
-              {storePerf.map(s => {
-                const closed = weekE.filter(e => e.storeId === s.id && e.exitTimestamp);
-                const avgM = closed.length ? Math.round(closed.reduce((sum, e) => sum + (e.exitTimestamp - e.timestamp), 0) / closed.length / 60000) : null;
-                return (
-                  <tr key={s.id}>
-                    <td style={{ color: '#F0E0E4', fontWeight: 600 }}>{s.name}</td>
-                    <td>{s.visits}</td>
-                    <td style={{ color: '#22c55e' }}>{s.conv}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div className="progress-bar" style={{ width: 80 }}><div className="progress-fill" style={{ width: `${s.pct}%`, background: s.pct >= 50 ? '#22c55e' : s.pct >= 30 ? '#f59e0b' : '#ef4444' }} /></div>
-                        <span>{s.pct}%</span>
-                      </div>
-                    </td>
-                    <td>{avgM !== null ? `${avgM}m` : '—'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
+        <div className="table-wrap">
+          <div className="table-head">
+            <div className="table-title">Store Performance (This Week)</div>
+            <DonutChart pct={convPct} size={60} />
+          </div>
+          {storePerf.length === 0 ? <div className="no-data">No active stores.</div> : (
+            <table>
+              <thead><tr><th>#</th><th>Store</th><th>Walk-ins</th><th>Conv.</th><th>Rate</th><th>Avg Time</th><th>Status</th></tr></thead>
+              <tbody>
+                {storePerf.map((s, i) => {
+                  const closed = weekE.filter(e => e.storeId === s.id && e.exitTimestamp);
+                  const avgM = closed.length ? Math.round(closed.reduce((sum, e) => sum + (e.exitTimestamp - e.timestamp), 0) / closed.length / 60000) : null;
+                  return (
+                    <tr key={s.id}>
+                      <td style={{ color: i === 0 ? '#C9A96E' : '#9A7080', fontWeight: 700 }}>#{i + 1}</td>
+                      <td style={{ color: '#F0E0E4', fontWeight: 500 }}>{s.name}</td>
+                      <td>{s.visits}</td>
+                      <td style={{ color: '#22c55e' }}>{s.conv}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div className="progress-bar" style={{ width: 50 }}><div className="progress-fill" style={{ width: `${s.pct}%`, background: s.pct >= 50 ? '#22c55e' : s.pct >= 30 ? '#f59e0b' : '#ef4444' }} /></div>
+                          <span style={{ color: s.pct >= 50 ? '#22c55e' : s.pct >= 30 ? '#f59e0b' : '#ef4444' }}>{s.pct}%</span>
+                        </div>
+                      </td>
+                      <td style={{ color: '#f59e0b' }}>{avgM !== null ? `${avgM}m` : '—'}</td>
+                      <td><span className={`badge ${s.pct >= 50 ? 'badge-green' : s.pct >= 30 ? 'badge-yellow' : 'badge-red'}`}>{s.pct >= 50 ? 'On Track' : s.pct >= 30 ? 'Average' : 'Needs Attention'}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
     </div>
   );
 }
@@ -259,30 +262,34 @@ function AdminStores({ stores, entries, onUpdate }) {
 
         return (
           <div key={s.id} className="store-card" style={{ opacity: s.active ? 1 : 0.5 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 15, fontWeight: 600, color: '#F0E0E4', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  {s.name}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: '#F0E0E4' }}>{s.name}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
                   <span style={{ fontSize: 12, color: '#9A7080' }}>PIN:</span>
                   {editId === s.id
-                    ? <input className="form-inp" style={{ width: 88, padding: '4px 8px', fontSize: 12 }} value={editPin} onChange={e => setEPin(e.target.value)} placeholder="New PIN" />
-                    : <span style={{ fontSize: 12, color: '#C9A96E', letterSpacing: 1 }}>{s.pin || 'Hidden'}</span>}
+                    ? <input className="form-inp" style={{ width: 80, padding: '3px 8px', fontSize: 12 }} value={editPin} onChange={e => setEPin(e.target.value)} placeholder="New PIN" />
+                    : <span style={{ fontFamily: 'monospace', color: '#C9A96E', fontWeight: 700, fontSize: 14 }}>{s.pin}</span>}
                   {editId === s.id
-                    ? (
-                      <>
-                        <button className="btn btn-sm btn-gold" onClick={() => updatePin(s.id)}>Save</button>
-                        <button className="btn btn-sm" onClick={() => setEdit(null)}>Cancel</button>
-                      </>
-                    )
+                    ? <><button className="btn btn-sm btn-gold" onClick={() => updatePin(s.id)}>Save</button><button className="btn btn-sm" onClick={() => setEdit(null)}>Cancel</button></>
                     : <button className="btn btn-sm" onClick={() => { setEdit(s.id); setEPin(s.pin || ''); }}>Change PIN</button>}
                 </div>
-                <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: 12, color: '#9A7080' }}>
-                  <span>{se.length} visits</span>
-                  <span style={{ color: '#22c55e' }}>{sc.length} converted</span>
-                  <span style={{ color: pct >= 50 ? '#22c55e' : pct >= 30 ? '#f59e0b' : '#ef4444' }}>{pct}% rate</span>
-                </div>
               </div>
-              <button className={`btn btn-sm ${s.active ? 'btn-danger' : ''}`} onClick={() => toggleStore(s.id)}>{s.active ? 'Disable' : 'Enable'}</button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <span className={`badge ${s.active ? 'badge-green' : 'badge-gray'}`}>{s.active ? 'Active' : 'Disabled'}</span>
+                <button className={`btn btn-sm ${s.active ? 'btn-danger' : ''}`} onClick={() => toggleStore(s.id)}>{s.active ? 'Disable' : 'Enable'}</button>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 20 }}>
+              {[{ v: se.length, l: 'Total entries' }, { v: sc.length, l: 'Converted', c: '#22c55e' }, { v: `${pct}%`, l: 'Conv. rate', c: pct >= 50 ? '#22c55e' : pct >= 30 ? '#f59e0b' : '#ef4444' }].map((stat, i) => (
+                <div key={i} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'Playfair Display,serif', color: stat.c || '#eeeaf5' }}>{stat.v}</div>
+                  <div style={{ fontSize: 10, color: '#9A7080' }}>{stat.l}</div>
+                </div>
+              ))}
+            </div>
+            <div className="progress-bar" style={{ marginTop: 10 }}>
+              <div className="progress-fill" style={{ width: `${pct}%`, background: pct >= 50 ? '#22c55e' : pct >= 30 ? '#f59e0b' : '#ef4444' }} />
             </div>
           </div>
         );
@@ -294,15 +301,15 @@ function AdminStores({ stores, entries, onUpdate }) {
 function AdminCounters({ stores, counters, onUpdate }) {
   const [selStore, setSel] = useState(stores[0]?.id || '');
   const [showAdd, setAdd] = useState(false);
-  const [form, setForm] = useState({ name: '', cat: 'Gold', products: '' });
+  const [form, setForm] = useState({ name: '', cat: 'Gold' });
   const effectiveStore = selStore || stores[0]?.id || '';
   const ctrs = counters[effectiveStore] || [];
 
   async function addCounter() {
     if (!form.name.trim()) return;
     if (!effectiveStore) return;
-    await api.post(`/counters/${effectiveStore}`, { name: form.name, category: form.cat, products: form.products });
-    setForm({ name: '', cat: 'Gold', products: '' });
+    await api.post(`/counters/${effectiveStore}`, { name: form.name, category: form.cat });
+    setForm({ name: '', cat: 'Gold' });
     setAdd(false);
     onUpdate();
   }
@@ -333,10 +340,9 @@ function AdminCounters({ stores, counters, onUpdate }) {
         <div className="store-card" style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#F0E0E4', marginBottom: 12 }}>New Counter</div>
           <div className="form-row">
-            <div><label className="form-label">Name</label><input className="form-inp" placeholder="e.g., C18 — Bridal" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
+            <div><label className="form-label">Name</label><input className="form-inp" placeholder="e.g., Gold Bangles" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></div>
             <div><label className="form-label">Category</label><select className="form-sel" value={form.cat} onChange={e => setForm({ ...form, cat: e.target.value })}>{CATEGORIES.map(c => <option key={c}>{c}</option>)}</select></div>
           </div>
-          <div className="form-group"><label className="form-label">Products</label><input className="form-inp" placeholder="Products handled at this counter" value={form.products} onChange={e => setForm({ ...form, products: e.target.value })} /></div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn-gold" onClick={addCounter}>Add</button>
             <button className="btn" onClick={() => setAdd(false)}>Cancel</button>
@@ -423,7 +429,7 @@ function AdminAnalytics({ stores, weekE }) {
           <div className="table-head"><div className="table-title">Category × Store Conversion Heatmap</div></div>
           <div style={{ overflowX: 'auto', padding: '0 16px 16px' }}>
             <table style={{ minWidth: 550 }}>
-              <thead><tr><th>Category</th>{stores.filter(s => s.active).map(s => <th key={s.id} style={{ fontSize: 10, padding: '8px 6px' }}>{branchLabel(s.name)}</th>)}</tr></thead>
+              <thead><tr><th>Category</th>{stores.filter(s => s.active).map(s => <th key={s.id} style={{ fontSize: 10, padding: '8px 6px' }}>{s.name.split(' ')[0]}</th>)}</tr></thead>
               <tbody>
                 {CATEGORIES.map(cat => (
                   <tr key={cat}>

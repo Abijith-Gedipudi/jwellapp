@@ -72,6 +72,9 @@ function CREDashboard({ user, stores, counters, onLogout }) {
                     <div style={{ fontSize: 11, color: '#9A7080' }}>{e.counterName} · {e.category} · In since {fmtTime(e.timestamp)}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
+                    {e.outcome === 'Converted' && !e.billNo && (
+                      <button className="btn btn-sm btn-gold" onClick={() => setBill(e)}>+ Bill</button>
+                    )}
                     <button className="btn btn-sm" style={{ borderColor: '#C9A96E', color: '#C9A96E' }} onClick={() => setOutcome(e)}>Update →</button>
                   </div>
                 </div>
@@ -87,7 +90,7 @@ function CREDashboard({ user, stores, counters, onLogout }) {
               <table>
                 <thead><tr><th>In</th><th>Out</th><th>Spent</th><th>Customer</th><th>Category</th><th>Outcome</th><th></th></tr></thead>
                 <tbody>
-                  {[...todayE].map(e => (
+                  {[...todayE].reverse().map(e => (
                     <tr key={e.id}>
                       <td style={{ fontSize: 11, color: '#9A7080', whiteSpace: 'nowrap' }}>{fmtTime(e.timestamp)}</td>
                       <td style={{ fontSize: 11, color: '#9A7080', whiteSpace: 'nowrap' }}>{e.exitTimestamp ? fmtTime(e.exitTimestamp) : '—'}</td>

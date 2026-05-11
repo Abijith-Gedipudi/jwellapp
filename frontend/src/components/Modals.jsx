@@ -139,6 +139,10 @@ export function EntryModal({ user, counters, entries, onClose, onSave }) {
             <div className="fade-in">
               <div className="step-title" style={{ marginTop: 8 }}>Notes <span style={{ color: '#9A7080', fontWeight: 400, fontSize: 12 }}>(Optional)</span></div>
               <textarea className="inp" rows={3} placeholder="Any remarks…" value={remarks} onChange={e => setRemarks(e.target.value)} style={{ resize: 'none', marginBottom: 0 }} />
+              <div style={{ marginTop: 12, padding: '10px 14px', background: '#1A0810', border: '1px solid #3A0E20', borderRadius: 10, fontSize: 12, color: '#C9A96E', lineHeight: 1.7 }}>
+                👀 Customer will be logged as <strong>Browsing</strong>.<br />
+                Use the <strong>Update Outcome</strong> button on the dashboard once they leave.
+              </div>
             </div>
           )}
 
@@ -160,6 +164,11 @@ export function OutcomeModal({ entry, onClose }) {
   const [billNo, setBill] = useState(entry.billNo || '');
   const [saving, setSaving] = useState(false);
 
+  const entryTime = new Date(entry.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const elapsedMs = Date.now() - entry.timestamp;
+  const elapsedMin = Math.round(elapsedMs / 60000);
+  const elapsed = elapsedMin < 60 ? `${elapsedMin}m` : `${Math.floor(elapsedMin / 60)}h ${elapsedMin % 60}m`;
+
   async function save() {
     if (!outcome) return;
     setSaving(true);
@@ -178,10 +187,16 @@ export function OutcomeModal({ entry, onClose }) {
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">
+          <div style={{ background: '#130810', border: '1px solid #3A0E20', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#C0A0A8', lineHeight: 1.8 }}>
+            <div><span style={{ color: '#9A7080' }}>Customer: </span><span style={{ color: '#F0E0E4', fontWeight: 600 }}>{entry.custName || entry.phone || 'Unknown'}</span></div>
+            <div><span style={{ color: '#9A7080' }}>Counter: </span>{entry.counterName} · {entry.category}</div>
+            <div><span style={{ color: '#9A7080' }}>Entry: </span>{entryTime} &nbsp;·&nbsp; <span style={{ color: '#f59e0b' }}>Time so far: {elapsed}</span></div>
+          </div>
           <div className="step-title">What happened?</div>
           <div className="tap-grid tap-grid-2" style={{ marginBottom: 12 }}>
             {OUTCOMES.filter(o => o.key !== 'Browsing').map(o => (
               <button key={o.key} className={`tap-btn outcome-btn${outcome === o.key ? ' selected' : ''}`}
+                style={outcome === o.key ? { borderColor: o.color, color: o.color, background: `${o.color}18` } : {}}
                 onClick={() => setOut(o.key)}>
                 <span className="tb-emoji">{o.emoji}</span>{o.label}
               </button>
@@ -189,7 +204,7 @@ export function OutcomeModal({ entry, onClose }) {
           </div>
           {outcome === 'Not Converted' && (
             <>
-              <div className="step-title">Why didn't they buy?</div>
+              <div className="step-title" style={{ marginBottom: 8 }}>Why didn't they buy?</div>
               <div className="tap-grid tap-grid-2" style={{ marginBottom: 12 }}>
                 {NO_CONV_REASONS.map(r => (
                   <button key={r} className={`tap-btn${reason === r ? ' selected' : ''}`} onClick={() => setReason(r)}>{r}</button>
@@ -199,12 +214,12 @@ export function OutcomeModal({ entry, onClose }) {
           )}
           {outcome === 'Converted' && (
             <div style={{ marginBottom: 12 }}>
-              <label className="form-label">Bill Number</label>
+              <label className="form-label">Bill Number <span style={{ color: '#9A7080', fontWeight: 400, fontSize: 11 }}>(Optional — enter by EOD)</span></label>
               <input className="inp" placeholder="e.g. ZJ-20450" value={billNo} onChange={e => setBill(e.target.value)} />
             </div>
           )}
           <button className="btn btn-gold" style={{ width: '100%' }} onClick={save} disabled={!outcome || saving}>
-            {saving ? 'Saving…' : '✓ Save'}
+            {saving ? 'Saving…' : '✓ Save & Close Visit'}
           </button>
         </div>
       </div>
@@ -233,8 +248,15 @@ export function BillModal({ entry, onClose }) {
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">
-          <input className="inp" placeholder="e.g. ZJ-20450" value={billNo} onChange={e => setBill(e.target.value)} onKeyDown={e => e.key === 'Enter' && save()} />
-          <button className="btn btn-gold" style={{ width: '100%', marginTop: 4 }} onClick={save} disabled={saving}>Save Bill Number</button>
+          <div style={{ fontSize: 13, color: '#C0A0A8', marginBottom: 16 }}>
+            <span style={{ color: '#F0E0E4', fontWeight: 600 }}>{entry.custName || entry.phone || 'Customer'}</span> · {entry.counterName}
+          </div>
+          <label className="form-label">Bill Number</label>
+          <input className="inp" placeholder="e.g. ZJ-20450" value={billNo}
+            onChange={e => setBill(e.target.value)} onKeyDown={e => e.key === 'Enter' && save()} />
+          <button className="btn btn-gold" style={{ width: '100%', marginTop: 4 }} onClick={save} disabled={saving}>
+            {saving ? 'Saving…' : '✓ Save Bill Number'}
+          </button>
         </div>
       </div>
     </div>

@@ -5,4 +5,13 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/crm/',
+  server: {
+    proxy: {
+      '/crm/api': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/crm\/api/, '')
+      }
+    }
+  }
 })

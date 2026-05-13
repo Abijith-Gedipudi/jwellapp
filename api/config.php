@@ -5,6 +5,9 @@ $db_name = 'jwellapp'; // Default XAMPP database name
 $db_user = 'root';
 $db_pass = ''; // Default XAMPP empty password
 
+// Set timezone to IST to match MySQL and frontend
+date_default_timezone_set('Asia/Kolkata');
+
 try {
     $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8", $db_user, $db_pass);
     // Set error mode to exception
